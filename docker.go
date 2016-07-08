@@ -70,8 +70,24 @@ func runDockerCommand(command string, args ...string) *exec.Cmd {
 
 // haveDockerMachine returns whether the "docker" command was found.
 func haveDockerMachine() bool {
-	_, err := exec.LookPath("docker-machine")
-	return err == nil
+	// TODO: Remove this hack when upstream officially supports this,
+	// which should be when docker native (beta) for mac becomes stable.
+	//
+	// For linux installations, the presence of docker-machine is non-existant,
+	// as docker is native (I believe windows probably has something similar).
+	// However, the docker native (beta) for mac ships with docker-machine,
+	// even though it's not actually used (to my knowledge). Thus, dockertest
+	// will fail since it will try and use docker-machine, rather than docker-native.
+	//
+	// This hack is to try and determine if docker native (beta) for mac is on
+	// the system, or the non-native version.
+	path, err := exec.LookPath("docker-machine")
+	if err != nil {
+		return false
+	}
+
+	machines, err := exec.Command(path, "ls", "-q").Output()
+	return err == nil && len(machines) > 0
 }
 
 // startDockerMachine starts the docker machine and returns false if the command failed to execute
